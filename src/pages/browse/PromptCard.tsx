@@ -36,6 +36,15 @@ export const PromptCard = ({
     <Card
       className="group relative flex flex-col border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden rounded-[24px]"
       onClick={() => openModal(prompt)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openModal(prompt);
+        }
+      }}
+      aria-label={`Open ${prompt.title}`}
     >
       {/* Visual Header */}
       <div className="relative aspect-[16/10] overflow-hidden">
