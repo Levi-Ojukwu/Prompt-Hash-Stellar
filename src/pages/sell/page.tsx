@@ -53,6 +53,7 @@ export default function SellPage() {
         <div className="mb-8 flex gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-1.5">
           <button
             onClick={() => setView("create")}
+            aria-pressed={view === "create"}
             className={`min-h-11 flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all sm:px-4 ${
               view === "create"
                 ? "bg-emerald-500/20 text-emerald-300 shadow-inner"
@@ -64,6 +65,7 @@ export default function SellPage() {
           </button>
           <button
             onClick={() => setView("manage")}
+            aria-pressed={view === "manage"}
             className={`min-h-11 flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all sm:px-4 ${
               view === "manage"
                 ? "bg-emerald-500/20 text-emerald-300 shadow-inner"
