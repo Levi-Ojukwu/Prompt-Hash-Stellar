@@ -4,6 +4,7 @@ import { Eye, Loader2, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CreatorDashboard } from "@/components/sell/CreatorDashboard";
 import { useWallet } from "@/hooks/useWallet";
 import { browserStellarConfig } from "@/lib/stellar/browserConfig";
 import {
@@ -61,6 +62,22 @@ const MyPrompts = ({ onCreateNew: _onCreateNew }: MyPromptsProps) => {
       ]),
     );
   }, [createdPrompts, priceDrafts]);
+
+  const dashboardStats = useMemo(() => {
+    const totalSales = createdPrompts.reduce((sum, p) => sum + (p.salesCount ?? 0), 0);
+    const totalRevenue = createdPrompts.reduce(
+      (sum, p) => sum + (p.priceStroops * BigInt(p.salesCount ?? 0)),
+      BigInt(0),
+    );
+    const activeListings = createdPrompts.filter((p) => p.active).length;
+
+    return {
+      totalListings: createdPrompts.length,
+      totalSales,
+      totalRevenue: stroopsToXlmString(totalRevenue),
+      activeListings,
+    };
+  }, [createdPrompts]);
 
   const refreshPromptLists = async () => {
     await Promise.all([
@@ -161,6 +178,13 @@ const MyPrompts = ({ onCreateNew: _onCreateNew }: MyPromptsProps) => {
 
   return (
     <div className="space-y-8">
+      <CreatorDashboard
+        stats={dashboardStats}
+        isLoading={createdQuery.isLoading}
+        isError={createdQuery.isError}
+        onRefresh={refreshPromptLists}
+      />
+
       {statusMessage ? (
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           {statusMessage}
