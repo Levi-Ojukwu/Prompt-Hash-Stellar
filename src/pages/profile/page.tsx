@@ -1050,6 +1050,14 @@ export default function ProfilePage() {
                             onUnlock={(promptId) => void handleUnlock(promptId)}
                           />
                         ))}
+                        <div className="pt-2 text-center">
+                          <Link
+                            to="/purchases"
+                            className="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors"
+                          >
+                            Open full purchases page →
+                          </Link>
+                        </div>
                       </div>
                     )}
                   </TabsContent>
