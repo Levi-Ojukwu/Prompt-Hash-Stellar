@@ -12,6 +12,9 @@ const LISTING_LIMITS = {
   title: 100,
   content: 50_000,
   category: 40,
+  encryptedPayload: 4096,
+  wrappedKey: 256,
+  encryptionIv: 64,
 };
 
 type ListingInput = {
@@ -116,4 +119,47 @@ export function validateListingMetadata(
   }
 
   return { normalized, errors };
+}
+
+export type EncryptedPayloadInput = {
+  encryptedPrompt?: unknown;
+  wrappedKey?: unknown;
+  encryptionIv?: unknown;
+};
+
+export type PayloadValidationErrors = Record<string, string>;
+
+export function validateEncryptedPayload(
+  input: EncryptedPayloadInput,
+): PayloadValidationErrors {
+  const errors: PayloadValidationErrors = {};
+  const encryptedPrompt = asTrimmedString(input.encryptedPrompt);
+  const wrappedKey = asTrimmedString(input.wrappedKey);
+  const encryptionIv = asTrimmedString(input.encryptionIv);
+
+  if (!encryptedPrompt) {
+    errors.encryptedPrompt = "Encrypted prompt payload is required.";
+  } else if (encryptedPrompt.length > LISTING_LIMITS.encryptedPayload) {
+    errors.encryptedPrompt =
+      `Encrypted payload is ${encryptedPrompt.length} characters, ` +
+      `exceeding the limit of ${LISTING_LIMITS.encryptedPayload}.`;
+  }
+
+  if (!wrappedKey) {
+    errors.wrappedKey = "Wrapped encryption key is required.";
+  } else if (wrappedKey.length > LISTING_LIMITS.wrappedKey) {
+    errors.wrappedKey =
+      `Wrapped key is ${wrappedKey.length} characters, ` +
+      `exceeding the limit of ${LISTING_LIMITS.wrappedKey}.`;
+  }
+
+  if (!encryptionIv) {
+    errors.encryptionIv = "Encryption IV is required.";
+  } else if (encryptionIv.length > LISTING_LIMITS.encryptionIv) {
+    errors.encryptionIv =
+      `Encryption IV is ${encryptionIv.length} characters, ` +
+      `exceeding the limit of ${LISTING_LIMITS.encryptionIv}.`;
+  }
+
+  return errors;
 }

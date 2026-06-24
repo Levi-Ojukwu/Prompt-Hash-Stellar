@@ -17,6 +17,7 @@ const MAX_IMAGE_URL_LEN: u32 = 512;
 const MAX_IV_LEN: u32 = 64;
 const LEASE_PRICE_BPS: u32 = 4_000;
 const MAX_ACCESS_EXPIRY: u64 = u64::MAX;
+const MAX_SPLITS: u32 = 10;
 
 #[contract]
 pub struct PromptHashContract;
@@ -79,8 +80,10 @@ impl PromptHashTrait for PromptHashContract {
             )?;
         }
 
-        // #50: validate revenue splits
+        // #50 / #217: validate revenue splits
         validate_splits(&env, &listing.splits)?;
+        validate_no_duplicate_recipients(&listing.splits)?;
+        ensure(listing.splits.len() <= MAX_SPLITS, Error::TooManySplits)?;
 
         let prompt_id = Storage::get_prompt_counter(&env);
         let prompt = Prompt {
@@ -430,6 +433,27 @@ impl PromptHashTrait for PromptHashContract {
         Storage::require_prompt(&env, prompt_id)?;
         Storage::get_listing_revision(&env, prompt_id, revision)
             .ok_or(Error::PromptNotFound)
+    }
+
+    fn update_splits(
+        env: Env,
+        creator: Address,
+        prompt_id: u128,
+        new_splits: Vec<Split>,
+    ) -> Result<(), Error> {
+        creator.require_auth();
+        ensure(!Storage::is_paused(&env), Error::ContractIsPaused)?;
+        let mut prompt = Storage::require_prompt(&env, prompt_id)?;
+        ensure(prompt.creator == creator, Error::Unauthorized)?;
+
+        validate_splits(&env, &new_splits)?;
+        validate_no_duplicate_recipients(&new_splits)?;
+        ensure(new_splits.len() <= MAX_SPLITS, Error::TooManySplits)?;
+
+        prompt.splits = new_splits;
+        Storage::update_prompt(&env, &prompt);
+        Events::emit_splits_updated(&env, prompt_id);
+        Ok(())
     }
 
     fn has_access(env: Env, user: Address, prompt_id: u128) -> Result<bool, Error> {
@@ -785,6 +809,17 @@ fn validate_prompt_fields(
         Error::InvalidWrappedKeyLength,
     )?;
     validate_len(encryption_iv, MAX_IV_LEN, Error::InvalidIvLength)?;
+    Ok(())
+}
+
+fn validate_no_duplicate_recipients(splits: &Vec<Split>) -> Result<(), Error> {
+    for i in 0..splits.len() {
+        for j in (i + 1)..splits.len() {
+            let a = splits.get(i).unwrap();
+            let b = splits.get(j).unwrap();
+            ensure(a.recipient != b.recipient, Error::DuplicateSplitRecipient)?;
+        }
+    }
     Ok(())
 }
 

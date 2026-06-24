@@ -2572,3 +2572,213 @@ fn test_revise_listing_buyer_retains_access_after_revision() {
 
     assert!(client.has_access(&buyer, &prompt_id));
 }
+
+// ─── Issue #217: Collaborator Split Management ──────────────────────────────
+
+#[test]
+fn test_update_splits_replaces_existing_splits() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+    let xlm_client = token::StellarAssetClient::new(&env, &context.xlm);
+
+    let creator = Address::generate(&env);
+    let co1 = Address::generate(&env);
+    let co2 = Address::generate(&env);
+    let buyer = Address::generate(&env);
+    let price: i128 = 10_000;
+
+    let mut initial_splits = Vec::<Split>::new(&env);
+    initial_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 1_000,
+    });
+
+    let prompt_id = create_prompt_with_splits(
+        &env, &client, &creator, "Updatable Splits", price, &context.xlm, initial_splits,
+    );
+    assert_eq!(client.get_prompt(&prompt_id).splits.len(), 1);
+
+    let mut new_splits = Vec::<Split>::new(&env);
+    new_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 500,
+    });
+    new_splits.push_back(Split {
+        recipient: co2.clone(),
+        bps: 1_500,
+    });
+    client.update_splits(&creator, &prompt_id, &new_splits);
+
+    let prompt = client.get_prompt(&prompt_id);
+    assert_eq!(prompt.splits.len(), 2);
+    assert_eq!(prompt.splits.get(0).unwrap().bps, 500);
+    assert_eq!(prompt.splits.get(1).unwrap().bps, 1_500);
+
+    fund_buyer(&xlm_client, &buyer, &context.contract, price);
+    let co1_start = xlm_client.balance(&co1);
+    let co2_start = xlm_client.balance(&co2);
+    let creator_start = xlm_client.balance(&creator);
+
+    client.buy_prompt(&buyer, &prompt_id, &None::<Address>, &price, &None::<Bytes>);
+
+    let expected_fee = price * 500 / 10_000;
+    let expected_co1 = price * 500 / 10_000;
+    let expected_co2 = price * 1_500 / 10_000;
+    let expected_creator = price - expected_fee - expected_co1 - expected_co2;
+
+    assert_eq!(xlm_client.balance(&co1), co1_start + expected_co1);
+    assert_eq!(xlm_client.balance(&co2), co2_start + expected_co2);
+    assert_eq!(xlm_client.balance(&creator), creator_start + expected_creator);
+}
+
+#[test]
+fn test_update_splits_clears_all_splits() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+
+    let creator = Address::generate(&env);
+    let co1 = Address::generate(&env);
+
+    let mut initial_splits = Vec::<Split>::new(&env);
+    initial_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 1_000,
+    });
+
+    let prompt_id = create_prompt_with_splits(
+        &env, &client, &creator, "Clear Splits", 5_000, &context.xlm, initial_splits,
+    );
+
+    let empty_splits = Vec::<Split>::new(&env);
+    client.update_splits(&creator, &prompt_id, &empty_splits);
+    assert_eq!(client.get_prompt(&prompt_id).splits.len(), 0);
+}
+
+#[test]
+fn test_update_splits_rejects_unauthorized_caller() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+
+    let creator = Address::generate(&env);
+    let stranger = Address::generate(&env);
+    let prompt_id = create_prompt(&env, &client, &creator, "Auth Splits", 5_000, &context.xlm);
+
+    let splits = Vec::<Split>::new(&env);
+    let result = client.try_update_splits(&stranger, &prompt_id, &splits);
+    match result {
+        Err(Ok(Error::Unauthorized)) => {}
+        other => panic!("expected Unauthorized for stranger update_splits, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_update_splits_rejects_invalid_total_bps() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+
+    let creator = Address::generate(&env);
+    let co1 = Address::generate(&env);
+    let prompt_id = create_prompt(&env, &client, &creator, "Bad Splits", 5_000, &context.xlm);
+
+    let mut bad_splits = Vec::<Split>::new(&env);
+    bad_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 9_600,
+    });
+
+    let result = client.try_update_splits(&creator, &prompt_id, &bad_splits);
+    match result {
+        Err(Ok(Error::InvalidSplits)) => {}
+        other => panic!("expected InvalidSplits for over-allocated update, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_update_splits_rejects_duplicate_recipients() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+
+    let creator = Address::generate(&env);
+    let co1 = Address::generate(&env);
+    let prompt_id = create_prompt(&env, &client, &creator, "Dup Splits", 5_000, &context.xlm);
+
+    let mut dup_splits = Vec::<Split>::new(&env);
+    dup_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 500,
+    });
+    dup_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 500,
+    });
+
+    let result = client.try_update_splits(&creator, &prompt_id, &dup_splits);
+    match result {
+        Err(Ok(Error::DuplicateSplitRecipient)) => {}
+        other => panic!("expected DuplicateSplitRecipient, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_create_prompt_rejects_duplicate_split_recipients() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+
+    let creator = Address::generate(&env);
+    let co1 = Address::generate(&env);
+
+    let mut dup_splits = Vec::<Split>::new(&env);
+    dup_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 500,
+    });
+    dup_splits.push_back(Split {
+        recipient: co1.clone(),
+        bps: 500,
+    });
+
+    let result = client.try_create_prompt(
+        &creator,
+        &String::from_str(&env, "https://example.com/img.png"),
+        &String::from_str(&env, "Dup Create Splits"),
+        &String::from_str(&env, "Software Development"),
+        &String::from_str(&env, "preview text here"),
+        &String::from_str(&env, "ciphertext"),
+        &String::from_str(&env, "iv"),
+        &String::from_str(&env, "wrapped-key"),
+        &hash(&env, 30),
+        &ListingConfig {
+            price: 5_000,
+            asset: context.xlm.clone(),
+            expires_at: 0,
+            splits: dup_splits,
+        },
+    );
+    match result {
+        Err(Ok(Error::DuplicateSplitRecipient)) => {}
+        other => panic!("expected DuplicateSplitRecipient on create, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_update_splits_blocked_when_paused() {
+    let env: Env = Default::default();
+    let context = setup(&env);
+    let client = PromptHashContractClient::new(&env, &context.contract);
+
+    let creator = Address::generate(&env);
+    let prompt_id = create_prompt(&env, &client, &creator, "Pause Splits", 5_000, &context.xlm);
+
+    client.set_pause_status(&true);
+    let result = client.try_update_splits(&creator, &prompt_id, &Vec::new(&env));
+    match result {
+        Err(Ok(Error::ContractIsPaused)) => {}
+        other => panic!("expected ContractIsPaused for update_splits, got {:?}", other),
+    }
+}

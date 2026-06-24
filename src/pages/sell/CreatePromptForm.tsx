@@ -29,6 +29,7 @@ import { createPrompt } from "@/lib/stellar/promptHashClient";
 import {
   LISTING_LIMITS,
   validateListingForm,
+  validateEncryptedPayload,
 } from "@/lib/validation/listing";
 
 const limits = {
@@ -232,14 +233,14 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
       const encrypted = await encryptPromptPlaintext(formData.fullPrompt);
       const wrappedKey = await wrapPromptKey(encrypted.keyBytes, unlockPublicKey);
 
-      if (encrypted.encryptedPrompt.length > limits.encrypted) {
-        throw new Error(
-          "Encrypted payload is too large for the current on-chain limit. Shorten the full prompt and try again.",
-        );
-      }
-
-      if (wrappedKey.length > limits.wrappedKey) {
-        throw new Error("Wrapped key exceeds the contract storage limit.");
+      const payloadErrors = validateEncryptedPayload({
+        encryptedPrompt: encrypted.encryptedPrompt,
+        wrappedKey,
+        encryptionIv: encrypted.encryptionIv,
+      });
+      const firstPayloadError = Object.values(payloadErrors)[0];
+      if (firstPayloadError) {
+        throw new Error(firstPayloadError);
       }
 
       const { promptId } = await createPrompt(

@@ -6,7 +6,12 @@ export const LISTING_LIMITS = {
   category: 40,
   preview: 280,
   fullPrompt: 50_000,
+  encryptedPayload: 4096,
+  wrappedKey: 256,
+  encryptionIv: 64,
 } as const;
+
+export const ESTIMATED_ENCRYPTION_OVERHEAD = 1.37;
 
 export type ListingFormInput = {
   imageUrl: string;
@@ -86,6 +91,14 @@ export function validateListingForm(
       "Add at least 10 characters of prompt content so buyers receive meaningful value.";
   } else if (fullPrompt.length > LISTING_LIMITS.fullPrompt) {
     errors.fullPrompt = `Shorten the prompt to ${LISTING_LIMITS.fullPrompt.toLocaleString()} characters or fewer.`;
+  } else if (wouldExceedPayloadLimit(fullPrompt.length)) {
+    const maxPlaintext = Math.floor(
+      LISTING_LIMITS.encryptedPayload / ESTIMATED_ENCRYPTION_OVERHEAD,
+    );
+    errors.fullPrompt =
+      `This prompt will exceed the ${LISTING_LIMITS.encryptedPayload.toLocaleString()}-character ` +
+      `on-chain encrypted payload limit after encryption. ` +
+      `Keep the prompt under ~${maxPlaintext.toLocaleString()} characters.`;
   }
 
   if (!priceXlm) {
@@ -102,6 +115,57 @@ export function validateListingForm(
           ? error.message
           : "Enter a valid XLM amount with up to 7 decimal places.";
     }
+  }
+
+  return errors;
+}
+
+export interface EncryptedPayloadInput {
+  encryptedPrompt: string;
+  wrappedKey: string;
+  encryptionIv: string;
+}
+
+export type PayloadValidationErrors = Partial<
+  Record<keyof EncryptedPayloadInput, string>
+>;
+
+export function estimateEncryptedSize(plaintextLength: number): number {
+  return Math.ceil(plaintextLength * ESTIMATED_ENCRYPTION_OVERHEAD);
+}
+
+export function wouldExceedPayloadLimit(plaintextLength: number): boolean {
+  return estimateEncryptedSize(plaintextLength) > LISTING_LIMITS.encryptedPayload;
+}
+
+export function validateEncryptedPayload(
+  input: EncryptedPayloadInput,
+): PayloadValidationErrors {
+  const errors: PayloadValidationErrors = {};
+
+  if (!input.encryptedPrompt) {
+    errors.encryptedPrompt = "Encrypted prompt payload is missing.";
+  } else if (input.encryptedPrompt.length > LISTING_LIMITS.encryptedPayload) {
+    errors.encryptedPrompt =
+      `Encrypted payload is ${input.encryptedPrompt.length.toLocaleString()} characters, ` +
+      `exceeding the on-chain limit of ${LISTING_LIMITS.encryptedPayload.toLocaleString()}. ` +
+      `Shorten the full prompt and try again.`;
+  }
+
+  if (!input.wrappedKey) {
+    errors.wrappedKey = "Wrapped encryption key is missing.";
+  } else if (input.wrappedKey.length > LISTING_LIMITS.wrappedKey) {
+    errors.wrappedKey =
+      `Wrapped key is ${input.wrappedKey.length} characters, ` +
+      `exceeding the limit of ${LISTING_LIMITS.wrappedKey}.`;
+  }
+
+  if (!input.encryptionIv) {
+    errors.encryptionIv = "Encryption IV is missing.";
+  } else if (input.encryptionIv.length > LISTING_LIMITS.encryptionIv) {
+    errors.encryptionIv =
+      `Encryption IV is ${input.encryptionIv.length} characters, ` +
+      `exceeding the limit of ${LISTING_LIMITS.encryptionIv}.`;
   }
 
   return errors;

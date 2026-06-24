@@ -99,6 +99,13 @@ struct ListingRevised {
     pub new_revision: u32,
 }
 
+/// Emitted when a creator updates the collaborator splits (#217).
+#[contractevent]
+struct SplitsUpdated {
+    #[topic]
+    pub prompt_id: u128,
+}
+
 pub struct Events;
 
 impl Events {
@@ -225,5 +232,9 @@ impl Events {
             new_revision,
         }
         .publish(env);
+    }
+
+    pub fn emit_splits_updated(env: &Env, prompt_id: u128) {
+        SplitsUpdated { prompt_id }.publish(env);
     }
 }
