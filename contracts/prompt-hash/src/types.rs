@@ -38,6 +38,9 @@ pub enum Error {
     InvalidLicenseTransfer = 30,
     // #226 – listing revision support
     RevisionFieldsUnchanged = 31,
+    // #217 – collaborator split management
+    DuplicateSplitRecipient = 32,
+    TooManySplits = 33,
 }
 
 #[contracttype]
@@ -262,6 +265,17 @@ pub trait PromptHashTrait {
         prompt_id: u128,
         revision: u32,
     ) -> Result<ListingRevisionRecord, Error>;
+
+    /// Replace the collaborator split configuration on an existing listing (#217).
+    /// Only the original creator may call this. The new splits must pass the same
+    /// validation as `create_prompt` (total bps + fee ≤ 10 000, no zero-bps
+    /// entries, no duplicate recipients, at most 10 entries).
+    fn update_splits(
+        env: Env,
+        creator: Address,
+        prompt_id: u128,
+        new_splits: Vec<Split>,
+    ) -> Result<(), Error>;
 
     fn has_access(env: Env, user: Address, prompt_id: u128) -> Result<bool, Error>;
     fn get_prompt(env: Env, prompt_id: u128) -> Result<Prompt, Error>;

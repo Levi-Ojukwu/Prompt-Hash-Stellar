@@ -11,6 +11,7 @@ import storage from "../util/storage";
 import { stellarWalletNetwork } from "../lib/env";
 import { ALBEDO_ID } from "@creit.tech/stellar-wallets-kit";
 import { useAsyncTransaction } from "../components/useAsyncTransaction";
+import { classifyWalletError } from "../lib/wallet/walletErrors";
 
 export type WalletStatus = 
   | "idle" 
@@ -122,11 +123,14 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       },
       onError: (e) => {
         console.error("Connection error:", e);
-        const message = e instanceof Error ? e.message : "Failed to connect wallet";
-        setState(prev => ({ 
-          ...prev, 
-          status: "error", 
-          error: message 
+        const classified = classifyWalletError(e);
+        const message = classified.recoveryAction
+          ? `${classified.message} ${classified.recoveryAction}`
+          : classified.message;
+        setState(prev => ({
+          ...prev,
+          status: "error",
+          error: message
         }));
       }
     }

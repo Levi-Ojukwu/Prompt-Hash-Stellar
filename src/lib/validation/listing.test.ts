@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildListingChecklistItems,
   validateListingForm,
+  validateEncryptedPayload,
+  estimateEncryptedSize,
+  wouldExceedPayloadLimit,
+  LISTING_LIMITS,
 } from "./listing";
 
 const validForm = {
@@ -71,5 +75,100 @@ describe("buildListingChecklistItems", () => {
     });
 
     expect(items.some((item) => item.status === "warn")).toBe(true);
+  });
+});
+
+describe("validateEncryptedPayload", () => {
+  it("accepts a valid payload within limits", () => {
+    expect(
+      validateEncryptedPayload({
+        encryptedPrompt: "a".repeat(1000),
+        wrappedKey: "b".repeat(100),
+        encryptionIv: "c".repeat(24),
+      }),
+    ).toEqual({});
+  });
+
+  it("rejects an oversized encrypted prompt", () => {
+    const errors = validateEncryptedPayload({
+      encryptedPrompt: "a".repeat(LISTING_LIMITS.encryptedPayload + 1),
+      wrappedKey: "b".repeat(100),
+      encryptionIv: "c".repeat(24),
+    });
+    expect(errors.encryptedPrompt).toMatch(/exceeding the on-chain limit/i);
+  });
+
+  it("rejects an oversized wrapped key", () => {
+    const errors = validateEncryptedPayload({
+      encryptedPrompt: "a".repeat(1000),
+      wrappedKey: "b".repeat(LISTING_LIMITS.wrappedKey + 1),
+      encryptionIv: "c".repeat(24),
+    });
+    expect(errors.wrappedKey).toMatch(/exceeding the limit/i);
+  });
+
+  it("rejects an oversized encryption IV", () => {
+    const errors = validateEncryptedPayload({
+      encryptedPrompt: "a".repeat(1000),
+      wrappedKey: "b".repeat(100),
+      encryptionIv: "c".repeat(LISTING_LIMITS.encryptionIv + 1),
+    });
+    expect(errors.encryptionIv).toMatch(/exceeding the limit/i);
+  });
+
+  it("rejects empty fields", () => {
+    const errors = validateEncryptedPayload({
+      encryptedPrompt: "",
+      wrappedKey: "",
+      encryptionIv: "",
+    });
+    expect(errors.encryptedPrompt).toMatch(/missing/i);
+    expect(errors.wrappedKey).toMatch(/missing/i);
+    expect(errors.encryptionIv).toMatch(/missing/i);
+  });
+
+  it("accepts payloads at exactly the limit", () => {
+    expect(
+      validateEncryptedPayload({
+        encryptedPrompt: "a".repeat(LISTING_LIMITS.encryptedPayload),
+        wrappedKey: "b".repeat(LISTING_LIMITS.wrappedKey),
+        encryptionIv: "c".repeat(LISTING_LIMITS.encryptionIv),
+      }),
+    ).toEqual({});
+  });
+});
+
+describe("estimateEncryptedSize", () => {
+  it("estimates encryption overhead", () => {
+    const estimate = estimateEncryptedSize(1000);
+    expect(estimate).toBeGreaterThan(1000);
+  });
+});
+
+describe("wouldExceedPayloadLimit", () => {
+  it("returns false for small prompts", () => {
+    expect(wouldExceedPayloadLimit(100)).toBe(false);
+  });
+
+  it("returns true for prompts that would exceed the encrypted limit", () => {
+    expect(wouldExceedPayloadLimit(5000)).toBe(true);
+  });
+});
+
+describe("validateListingForm encrypted payload warning", () => {
+  it("warns when prompt would exceed encrypted payload limit", () => {
+    const errors = validateListingForm({
+      ...validForm,
+      fullPrompt: "a".repeat(4000),
+    });
+    expect(errors.fullPrompt).toMatch(/on-chain encrypted payload limit/i);
+  });
+
+  it("accepts prompts that fit within the encrypted limit", () => {
+    const errors = validateListingForm({
+      ...validForm,
+      fullPrompt: "a".repeat(100),
+    });
+    expect(errors.fullPrompt).toBeUndefined();
   });
 });

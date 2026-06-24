@@ -15,6 +15,14 @@ export function xlmToStroops(xlm: number): bigint {
 }
 
 /**
+ * Formats a price in stroops as a human-readable XLM label.
+ */
+export function formatPriceLabel(stroops: bigint): string {
+  const xlmStr = stroopsToXlmString(stroops);
+  return `${xlmStr} XLM`;
+}
+
+/**
  * Formats an address for display (truncated)
  */
 export function formatAddress(address: string, prefixLength = 8, suffixLength = 4): string {

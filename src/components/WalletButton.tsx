@@ -1,23 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@stellar/design-system";
 import { useWallet } from "../hooks/useWallet";
 import { shortenAddress } from "@/lib/utils";
 import { Button as ShadcnButton } from "./ui/button";
-import { Loader2, AlertCircle, X } from "lucide-react";
+import { Loader2, AlertCircle, X, RefreshCw } from "lucide-react";
 
 export const WalletButton = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const { address, status, error, connect, disconnect } = useWallet();
   const [dismissedError, setDismissedError] = useState<string | null>(null);
+  const lastWalletIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status !== "error") setDismissedError(null);
   }, [status]);
 
   const handleConnect = async (id: string) => {
+    lastWalletIdRef.current = id;
     setShowModal(false);
     await connect(id);
+  };
+
+  const handleRetry = () => {
+    if (lastWalletIdRef.current) {
+      void connect(lastWalletIdRef.current);
+    } else {
+      setShowModal(true);
+    }
   };
 
   const handleDisconnect = () => {
@@ -28,9 +38,16 @@ export const WalletButton = () => {
   return (
     <div className="relative flex flex-col items-center w-full">
       {status === "error" && error && dismissedError !== error && (
-        <div className="absolute bottom-full right-0 mb-2 w-max max-w-xs bg-red-500 text-white text-xs pl-3 pr-2 py-2 rounded shadow-lg whitespace-normal z-50 flex items-start gap-1">
+        <div className="absolute bottom-full right-0 mb-2 w-max max-w-xs bg-red-500/95 text-white text-xs pl-3 pr-2 py-2 rounded shadow-lg whitespace-normal z-50 flex items-start gap-1">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="flex-1">{error}</span>
+          <button
+            onClick={handleRetry}
+            className="opacity-80 hover:opacity-100 transition-opacity ml-1 p-0.5"
+            aria-label="Retry connection"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
           <button onClick={() => setDismissedError(error)} className="opacity-80 hover:opacity-100 transition-opacity ml-1 p-0.5" aria-label="Dismiss error">
             <X className="w-3 h-3" />
           </button>
