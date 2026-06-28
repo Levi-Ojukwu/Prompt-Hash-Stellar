@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import {
   ListingQualityChecklist,
   buildChecklistItems,
@@ -107,7 +107,7 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
     [formData, offChainStorage],
   );
 
-  const checklistHasFailures = checklistItems.some((i) => i.status === "fail");
+  const checklistHasFailures = checklistItems.some((i) => i.status === "fail");`n`n  const totalRevenueSharePercent = useMemo(`n    () =>`n      formData.coCreators.reduce((total, coCreator) => {`n        const numeric = Number(coCreator.sharePercent.trim());`n        return Number.isFinite(numeric) ? total + numeric : total;`n      }, 0),`n    [formData.coCreators],`n  );
 
   const clearDraft = () => {
     if (draftStorageKey) {
@@ -203,7 +203,7 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
     });
   };
 
-  const validateForm = () => {
+  const handleCoCreatorChange = (`n    index: number,`n    field: keyof RevenueSplitFormRow,`n    value: string,`n  ) => {`n    setFormData((previous) => ({`n      ...previous,`n      coCreators: previous.coCreators.map((coCreator, rowIndex) =>`n        rowIndex === index ? { ...coCreator, [field]: value } : coCreator,`n      ),`n    }));`n    setErrors((previous) => {`n      const next = { ...previous };`n      delete next.coCreators;`n      return next;`n    });`n  };`n`n  const addCoCreator = () => {`n    setFormData((previous) => ({`n      ...previous,`n      coCreators: [...previous.coCreators, { address: "", sharePercent: "" }],`n    }));`n    setErrors((previous) => {`n      const next = { ...previous };`n      delete next.coCreators;`n      return next;`n    });`n  };`n`n  const removeCoCreator = (index: number) => {`n    setFormData((previous) => ({`n      ...previous,`n      coCreators: previous.coCreators.filter((_, rowIndex) => rowIndex !== index),`n    }));`n    setErrors((previous) => {`n      const next = { ...previous };`n      delete next.coCreators;`n      return next;`n    });`n  };`n`n  const validateForm = () => {
     const nextErrors = validateListingForm(formData, { offChainStorage });
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
