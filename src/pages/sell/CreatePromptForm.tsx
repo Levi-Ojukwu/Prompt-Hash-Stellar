@@ -33,6 +33,7 @@ import { xlmToStroops } from "@/lib/stellar/format";
 import { createPrompt } from "@/lib/stellar/promptHashClient";
 import {
   LISTING_LIMITS,
+  RevenueSplitFormInput,
   validateListingForm,
   validateEncryptedPayload,
 } from "@/lib/validation/listing";
@@ -54,6 +55,7 @@ interface FormData {
   previewText: string;
   fullPrompt: string;
   priceXlm: string;
+  coCreators: RevenueSplitFormInput[];
 }
 
 interface CreatePromptFormProps {
@@ -69,6 +71,12 @@ const createEmptyFormData = (): FormData => ({
   previewText: "",
   fullPrompt: "",
   priceXlm: "2",
+  coCreators: [],
+});
+
+const createEmptyCoCreator = (): RevenueSplitFormInput => ({
+  address: "",
+  sharePercent: "",
 });
 
 export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
@@ -107,7 +115,15 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
     [formData, offChainStorage],
   );
 
-  const checklistHasFailures = checklistItems.some((i) => i.status === "fail");`n`n  const totalRevenueSharePercent = useMemo(`n    () =>`n      formData.coCreators.reduce((total, coCreator) => {`n        const numeric = Number(coCreator.sharePercent.trim());`n        return Number.isFinite(numeric) ? total + numeric : total;`n      }, 0),`n    [formData.coCreators],`n  );
+  const checklistHasFailures = checklistItems.some((i) => i.status === "fail");
+  const totalRevenueSharePercent = useMemo(
+    () =>
+      formData.coCreators.reduce(
+        (sum, coCreator) => sum + (Number(coCreator.sharePercent.trim()) || 0),
+        0,
+      ),
+    [formData.coCreators],
+  );
 
   const clearDraft = () => {
     if (draftStorageKey) {
@@ -146,6 +162,7 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
         setFormData((current) => ({
           ...current,
           ...parsed.formData,
+          coCreators: parsed.formData.coCreators ?? current.coCreators,
         }));
         setDraftRestored(true);
         setLastSavedAt(parsed.savedAt ?? null);
@@ -203,7 +220,55 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
     });
   };
 
-  const handleCoCreatorChange = (`n    index: number,`n    field: keyof RevenueSplitFormRow,`n    value: string,`n  ) => {`n    setFormData((previous) => ({`n      ...previous,`n      coCreators: previous.coCreators.map((coCreator, rowIndex) =>`n        rowIndex === index ? { ...coCreator, [field]: value } : coCreator,`n      ),`n    }));`n    setErrors((previous) => {`n      const next = { ...previous };`n      delete next.coCreators;`n      return next;`n    });`n  };`n`n  const addCoCreator = () => {`n    setFormData((previous) => ({`n      ...previous,`n      coCreators: [...previous.coCreators, { address: "", sharePercent: "" }],`n    }));`n    setErrors((previous) => {`n      const next = { ...previous };`n      delete next.coCreators;`n      return next;`n    });`n  };`n`n  const removeCoCreator = (index: number) => {`n    setFormData((previous) => ({`n      ...previous,`n      coCreators: previous.coCreators.filter((_, rowIndex) => rowIndex !== index),`n    }));`n    setErrors((previous) => {`n      const next = { ...previous };`n      delete next.coCreators;`n      return next;`n    });`n  };`n`n  const validateForm = () => {
+  const handleCoCreatorChange = (
+    index: number,
+    field: keyof RevenueSplitFormInput,
+    value: string,
+  ) => {
+    setFormData((previous) => ({
+      ...previous,
+      coCreators: previous.coCreators.map((coCreator, currentIndex) =>
+        currentIndex === index ? { ...coCreator, [field]: value } : coCreator,
+      ),
+    }));
+    setErrors((previous) => {
+      const next = { ...previous };
+      delete next.coCreators;
+      return next;
+    });
+  };
+
+  const addCoCreator = () => {
+    setFormData((previous) => {
+      if (previous.coCreators.length >= LISTING_LIMITS.maxCoCreators) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        coCreators: [...previous.coCreators, createEmptyCoCreator()],
+      };
+    });
+    setErrors((previous) => {
+      const next = { ...previous };
+      delete next.coCreators;
+      return next;
+    });
+  };
+
+  const removeCoCreator = (index: number) => {
+    setFormData((previous) => ({
+      ...previous,
+      coCreators: previous.coCreators.filter((_, currentIndex) => currentIndex !== index),
+    }));
+    setErrors((previous) => {
+      const next = { ...previous };
+      delete next.coCreators;
+      return next;
+    });
+  };
+
+  const validateForm = () => {
     const nextErrors = validateListingForm(formData, { offChainStorage });
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -277,6 +342,10 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
           wrappedKey,
           contentHash: encrypted.contentHash,
           priceStroops: xlmToStroops(formData.priceXlm),
+          splits: formData.coCreators.map((coCreator) => ({
+            recipient: coCreator.address.trim(),
+            bps: Math.round(Number(coCreator.sharePercent.trim()) * 100),
+          })),
         },
       );
 
@@ -433,6 +502,94 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
       </div>
 
       <PricingGuidance currentPriceXlm={formData.priceXlm} />
+
+      <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-medium text-slate-100">
+              Co-creators and revenue splits
+            </h3>
+            <p className="text-xs text-slate-400">
+              Share a portion of each sale with collaborators already supported by the contract.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={addCoCreator}
+            disabled={formData.coCreators.length >= LISTING_LIMITS.maxCoCreators}
+          >
+            <Plus className="h-4 w-4" />
+            Add co-creator
+          </Button>
+        </div>
+
+        {formData.coCreators.length > 0 ? (
+          <div className="space-y-3">
+            {formData.coCreators.map((coCreator, index) => (
+              <div
+                key={`${index}-${coCreator.address}`}
+                className="grid gap-3 rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 md:grid-cols-[minmax(0,1fr)_140px_auto]"
+              >
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-300">
+                    Stellar address
+                  </label>
+                  <Input
+                    value={coCreator.address}
+                    onChange={(event) =>
+                      handleCoCreatorChange(index, "address", event.target.value)
+                    }
+                    autoComplete="off"
+                    placeholder="G..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-300">
+                    Share %
+                  </label>
+                  <Input
+                    value={coCreator.sharePercent}
+                    onChange={(event) =>
+                      handleCoCreatorChange(index, "sharePercent", event.target.value)
+                    }
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="15"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="px-3 text-slate-300 hover:text-white"
+                    onClick={() => removeCoCreator(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">
+            Add collaborators here when a prompt has multiple creators.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <span>Total shared: {totalRevenueSharePercent.toFixed(2)}%</span>
+          <span>Primary creator keeps: {Math.max(0, 100 - totalRevenueSharePercent).toFixed(2)}%</span>
+        </div>
+
+        {errors.coCreators ? (
+          <p className="flex items-center gap-1 text-sm text-red-400">
+            <AlertCircle className="h-3.5 w-3.5" />
+            {errors.coCreators}
+          </p>
+        ) : null}
+      </div>
 
       <div className="space-y-2">
         <label htmlFor="fullPrompt" className="text-sm font-medium">
