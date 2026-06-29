@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  History,
   Loader2,
   ShoppingBag,
   Sparkles,
@@ -19,6 +20,7 @@ import { getPrompt } from "@/lib/stellar/promptHashClient";
 import { formatPriceLabel } from "@/lib/stellar/format";
 import { copyToClipboard } from "@/lib/clipboard/secureClipboard";
 import { usePageMeta } from "@/lib/seo/usePageMeta";
+import { PromptRevisionHistory } from "@/components/analytics/PromptRevisionHistory";
 
 const FALLBACK_IMAGE = "/images/codeguru.png";
 
@@ -158,6 +160,12 @@ export default function PromptDetailPage() {
                 <span className="font-semibold text-white">
                   {formatPriceLabel(prompt.priceStroops)}
                 </span>
+                {"revision" in prompt && prompt.revision !== undefined && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <History className="h-3.5 w-3.5" />
+                    v{prompt.revision}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row">

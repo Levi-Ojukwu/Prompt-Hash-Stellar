@@ -29,6 +29,7 @@ import { PromptModal } from "./PromptModal";
 import { NoResultsSuggestions } from "./NoResultsSuggestions";
 import { invalidateAllPromptQueries } from "@/hooks/useContractSync";
 import { rankPrompts } from "@/lib/search/rankingEngine";
+import { recordPreview } from "@/lib/prompts/previewAnalytics";
 
 const ITEMS_PER_PAGE = 9;
 const ENABLE_INFINITE_SCROLL = true;
@@ -74,6 +75,11 @@ const FetchAllPrompts = ({
   const [currentPage, setCurrentPage] = useState(1);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [savingPromptId, setSavingPromptId] = useState<string | null>(null);
+
+  const handleOpenModal = (prompt: PromptRecord) => {
+    setSelectedPrompt(prompt);
+    recordPreview(prompt.id.toString());
+  };
 
   const promptsQuery = useQuery({
     queryKey: ["marketplace-prompts"],
@@ -309,7 +315,7 @@ const FetchAllPrompts = ({
                 key={prompt.id.toString()}
                 prompt={prompt}
                 hasAccess={accessMap.get(prompt.id.toString()) ?? false}
-                openModal={setSelectedPrompt}
+                openModal={handleOpenModal}
                 isSaved={savedPromptIds.has(prompt.id.toString())}
                 isSaving={savingPromptId === prompt.id.toString()}
                 onToggleSave={handleToggleSave}

@@ -102,6 +102,21 @@ const promptSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    previewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    currentRevision: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    revisionNotes: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   {
     timestamps: true,
