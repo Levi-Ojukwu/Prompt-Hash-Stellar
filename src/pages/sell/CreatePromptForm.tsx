@@ -1,4 +1,10 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import {
@@ -24,10 +30,7 @@ import {
   encryptPromptPlaintext,
   wrapPromptKey,
 } from "@/lib/crypto/promptCrypto";
-import {
-  isIpfsUploadConfigured,
-  uploadCiphertextToIpfs,
-} from "@/lib/ipfs";
+import { isIpfsUploadConfigured, uploadCiphertextToIpfs } from "@/lib/ipfs";
 import { browserStellarConfig } from "@/lib/stellar/browserConfig";
 import { xlmToStroops } from "@/lib/stellar/format";
 import { createPrompt } from "@/lib/stellar/promptHashClient";
@@ -99,9 +102,7 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
   const isConfigured = useMemo(
     () =>
       Boolean(
-        address &&
-          browserStellarConfig.promptHashContractId &&
-          unlockPublicKey,
+        address && browserStellarConfig.promptHashContractId && unlockPublicKey,
       ),
     [address, signTransaction],
   );
@@ -175,7 +176,11 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
   }, [draftStorageKey]);
 
   useEffect(() => {
-    if (!draftStorageKey || draftLoadRef.current !== draftStorageKey || isSubmitting) {
+    if (
+      !draftStorageKey ||
+      draftLoadRef.current !== draftStorageKey ||
+      isSubmitting
+    ) {
       return;
     }
 
@@ -305,16 +310,22 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
     setIsSubmitting(true);
     try {
       const encrypted = await encryptPromptPlaintext(formData.fullPrompt);
-      const wrappedKey = await wrapPromptKey(encrypted.keyBytes, unlockPublicKey);
+      const wrappedKey = await wrapPromptKey(
+        encrypted.keyBytes,
+        unlockPublicKey,
+      );
 
       // Store the (potentially large) ciphertext off-chain on IPFS when
       // configured, keeping only a compact `ipfs://<cid>` reference on-chain.
       // Falls back to inline on-chain storage when IPFS is not configured.
       let encryptedPromptPayload = encrypted.encryptedPrompt;
       if (offChainStorage) {
-        const { uri } = await uploadCiphertextToIpfs(encrypted.encryptedPrompt, {
-          name: `prompt-${address.slice(0, 8)}`,
-        });
+        const { uri } = await uploadCiphertextToIpfs(
+          encrypted.encryptedPrompt,
+          {
+            name: `prompt-${address.slice(0, 8)}`,
+          },
+        );
         encryptedPromptPayload = uri;
       }
 
@@ -377,10 +388,42 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
 
       {!isConfigured ? (
         <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          Connect your wallet and configure `PUBLIC_PROMPT_HASH_CONTRACT_ID` plus
-          `PUBLIC_UNLOCK_PUBLIC_KEY` before listing prompts.
+          Connect your wallet and configure `PUBLIC_PROMPT_HASH_CONTRACT_ID`
+          plus `PUBLIC_UNLOCK_PUBLIC_KEY` before listing prompts.
         </div>
       ) : null}
+
+      {(draftRestored || lastSavedAt) && isConfigured && (
+        <div className="flex items-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2.5 text-xs text-cyan-100">
+          {draftRestored ? (
+            <>
+              <span className="h-2 w-2 rounded-full bg-cyan-400" />
+              Draft restored from{" "}
+              {lastSavedAt
+                ? new Date(lastSavedAt).toLocaleString()
+                : "previous session"}
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Draft saved{" "}
+              {lastSavedAt ? new Date(lastSavedAt).toLocaleString() : ""}
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              clearDraft();
+              setFormData(createEmptyFormData());
+              setErrors({});
+              setShowChecklist(false);
+            }}
+            className="ml-auto text-xs text-cyan-200 underline underline-offset-2 hover:text-cyan-50"
+          >
+            Discard
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
@@ -457,7 +500,10 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
           <label htmlFor="category" className="text-sm font-medium">
             Category
           </label>
-          <Select value={formData.category} onValueChange={handleCategoryChange}>
+          <Select
+            value={formData.category}
+            onValueChange={handleCategoryChange}
+          >
             <SelectTrigger
               id="category"
               className={errors.category ? "border-red-500" : ""}
@@ -617,19 +663,7 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
         <ListingQualityChecklist items={checklistItems} />
       ) : null}
 
-      {(draftRestored || lastSavedAt) && !isSubmitting ? (
-        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-medium">
-                {draftRestored ? "Recovered local draft." : "Draft saved locally."}
-              </p>
-              <p className="text-xs text-cyan-100/80">
-                Stored only on this device and cleared after publish or discard.
-                {lastSavedAt ? ` Last saved ${new Date(lastSavedAt).toLocaleString()}.` : ""}
-              </p>
-            </div>
-            <Button
+      <Button
               type="button"
               variant="outline"
               className="h-9 border-cyan-300/30 bg-cyan-500/10 text-cyan-50 hover:bg-cyan-500/20"

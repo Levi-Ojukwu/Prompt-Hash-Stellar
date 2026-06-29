@@ -138,6 +138,7 @@ export const PromptCard = ({
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
               data-testid="badge-active"
+              title="This prompt is currently available for purchase"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Active
@@ -146,6 +147,7 @@ export const PromptCard = ({
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20"
               data-testid="badge-inactive"
+              title="This prompt is not currently available for purchase"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
               Inactive
@@ -157,6 +159,7 @@ export const PromptCard = ({
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20"
               data-testid="badge-purchased"
+              title="You have purchased a license for this prompt"
             >
               Purchased
             </span>
@@ -164,6 +167,7 @@ export const PromptCard = ({
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
               data-testid="badge-unlockable"
+              title="Purchase a license to unlock this prompt"
             >
               Unlockable
             </span>
@@ -174,6 +178,7 @@ export const PromptCard = ({
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"
               data-testid="badge-verified"
+              title="Content integrity verified on the Stellar blockchain"
             >
               <ShieldCheck className="h-3 w-3 text-amber-400" />
               Verified
@@ -223,7 +228,9 @@ export const PromptCard = ({
                 </span>
               </div>
             ) : (
-              <span className="text-[11px] text-slate-500 italic">No ratings yet</span>
+              <span className="text-[11px] text-slate-500 italic">
+                No ratings yet
+              </span>
             )}
           </div>
         </div>

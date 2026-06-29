@@ -14,6 +14,15 @@ const SellerPage = lazy(() => import("./pages/sellers/page.tsx"));
 const PromptDetailPage = lazy(
   () => import("./pages/prompts/PromptDetailPage.tsx"),
 );
+const CollectionsPage = lazy(
+  () => import("./pages/collections/CollectionsPage.tsx"),
+);
+const CollectionDetailPage = lazy(
+  () => import("./pages/collections/CollectionDetailPage.tsx"),
+);
+const PayoutSettingsPage = lazy(
+  () => import("./pages/profile/PayoutSettingsPage.tsx"),
+);
 
 const AppLayout = () => (
   <main className="min-h-screen bg-slate-950 text-white">
@@ -41,6 +50,12 @@ function App() {
           <Route path="/prompts/:id" element={<PromptDetailPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route path="/sellers/:sellerId" element={<SellerPage />} />
+          <Route path="/collections" element={<CollectionsPage />} />
+          <Route path="/collections/:id" element={<CollectionDetailPage />} />
+          <Route
+            path="/profile/payout-settings"
+            element={<PayoutSettingsPage />}
+          />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

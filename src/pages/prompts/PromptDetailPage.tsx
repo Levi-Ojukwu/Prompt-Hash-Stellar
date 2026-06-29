@@ -7,6 +7,7 @@ import {
   Copy,
   History,
   Loader2,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
   User,
@@ -128,11 +129,39 @@ export default function PromptDetailPage() {
                   <Sparkles className="mr-1 h-3 w-3" />
                   {prompt.category}
                 </Badge>
-                {!prompt.active && (
-                  <Badge className="border-white/10 bg-white/[0.04] text-slate-300">
-                    Unavailable
-                  </Badge>
+                {prompt.active ? (
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    title="This prompt is currently available for purchase"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Active
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20"
+                    title="This prompt is not currently available for purchase"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                    Inactive
+                  </span>
                 )}
+                {prompt.contentHash && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    title="Content integrity verified on the Stellar blockchain"
+                  >
+                    <ShieldCheck className="h-3 w-3 text-amber-400" />
+                    Verified
+                  </span>
+                )}
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                  title={`${prompt.salesCount} license${prompt.salesCount !== 1 ? "s" : ""} sold`}
+                >
+                  <ShoppingBag className="h-3 w-3" />
+                  {prompt.salesCount} sold
+                </span>
               </div>
 
               <div>
@@ -152,10 +181,6 @@ export default function PromptDetailPage() {
                       ? `${prompt.creator.slice(0, 6)}…${prompt.creator.slice(-4)}`
                       : prompt.creator}
                   </span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  {prompt.salesCount} sold
                 </span>
                 <span className="font-semibold text-white">
                   {formatPriceLabel(prompt.priceStroops)}
