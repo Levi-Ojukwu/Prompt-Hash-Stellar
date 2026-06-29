@@ -123,31 +123,36 @@ export function CreatePromptForm({ onCreated }: CreatePromptFormProps) {
         />
       </div>
 
-      {/* #330 — Description with Markdown editor + preview */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label htmlFor="description" className="text-sm font-medium">
-            Description{" "}
-            <span className="font-normal text-slate-500">
-              (Markdown supported)
-            </span>
-          </label>
-          <div className="flex gap-1 rounded-lg border border-white/10 bg-slate-900/60 p-0.5">
-            <button
-              type="button"
-              onClick={() => setDescriptionTab("write")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                descriptionTab === "write"
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Pencil className="h-3 w-3" /> Write
-            </button>
-            <button
-              type="button"
-              onClick={() => setDescriptionTab("preview")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                descriptionTab === "preview"
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-400 hover:text-white"
+      {showChecklist ? (
+        <ListingQualityChecklist items={checklistItems} />
+      ) : null}
+
+      <Button
+        className="w-full bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+        disabled={isSubmitting || (showChecklist && checklistHasFailures)}
+        onClick={handleSubmit}
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Encrypting and submitting...
+          </>
+        ) : (
+          "Create prompt listing"
+        )}
+      </Button>
+
+      {submitError ? (
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {submitError}
+        </div>
+      ) : null}
+
+      {successMessage ? (
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          {successMessage}
+        </div>
+      ) : null}
+    </div>
+  );
+}
