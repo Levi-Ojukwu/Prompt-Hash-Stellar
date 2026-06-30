@@ -14,6 +14,7 @@ import { TransactionProvider } from "./components/TransactionProvider.tsx";
 import { NotificationProvider } from "./providers/NotificationProvider.tsx";
 import { ContractSyncProvider } from "./providers/ContractSyncProvider.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
+import { ThemeProvider } from "./components/theme-provider.tsx";
 
 // ── Sentry frontend monitoring (#332) ─────────────────────────────────────
 // Set PUBLIC_SENTRY_DSN in .env to enable error reporting.
@@ -53,9 +54,11 @@ createRoot(document.getElementById("root") as HTMLElement).render(
           <ContractSyncProvider>
             <TransactionProvider>
               <WalletProvider>
-                <BrowserRouter>
-                  <App />
-                </BrowserRouter>
+                  <BrowserRouter>
+                    <ThemeProvider>
+                      <App />
+                    </ThemeProvider>
+                  </BrowserRouter>
               </WalletProvider>
             </TransactionProvider>
           </ContractSyncProvider>
