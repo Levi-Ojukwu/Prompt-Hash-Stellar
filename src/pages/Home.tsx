@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { MarketplaceAnalyticsCards } from "@/components/analytics/MarketplaceAnalyticsCards";
 import { usePageMeta } from "@/lib/seo/usePageMeta";
 import { Web3Tooltip } from "@/components/Web3Tooltip";
-import { MarketplaceActivityFeed } from "@/components/MarketplaceActivityFeed";
+import FaqSection from "@/components/faq-section";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 const stats = [
   {
@@ -290,8 +291,10 @@ export default function Home() {
 
         <FeaturedCreators />
         <FeaturedPrompts />
+        <FaqSection />
       </main>
       <Footer />
+      <OnboardingTour />
     </div>
   );
 }

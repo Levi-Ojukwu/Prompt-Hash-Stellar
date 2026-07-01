@@ -398,6 +398,103 @@ This repository is licensed under the Apache License 2.0. See `LICENSE`.
 
 Maintained by the PromptHash Stellar team for Drip Wave submission and ongoing open-source development.
 
+## Project Structure
+
+```
+├── api/                    # Vercel serverless functions
+│   ├── auth/               # Challenge token issuance & secret rotation
+│   ├── prompts/            # Unlock, versioning, and listing endpoints
+│   ├── reviews/            # Review submission endpoints
+│   ├── webhooks/           # Webhook integration endpoints
+│   ├── health.ts           # Service health check
+│   └── status.ts           # Multi-service status dashboard
+├── contracts/              # Soroban smart contracts (Rust)
+├── server/                 # Express backend (read-only indexing, analytics)
+│   └── src/
+│       ├── controllers/    # Route handlers
+│       ├── db/             # Database connection
+│       ├── models/         # Mongoose schemas
+│       ├── routes/         # Express route definitions
+│       ├── services/       # Cache, backup, listing validation
+│       └── tests/          # Server integration tests
+├── src/                    # React frontend (Vite + TypeScript)
+│   ├── components/         # Reusable UI components
+│   ├── hooks/              # Custom React hooks (useTheme, wallet, etc.)
+│   ├── lib/                # Core logic (crypto, stellar, auth, validation)
+│   ├── pages/              # Route pages (browse, sell, profile, etc.)
+│   ├── providers/          # React context providers
+│   └── test/               # Frontend test utilities & fixtures
+├── docs/                   # Additional documentation
+├── scripts/                # Build & setup scripts
+├── eslint.config.js        # ESLint configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+└── vite.config.ts          # Vite build configuration
+```
+
+## API Endpoints
+
+### Vercel Serverless Functions (`/api/*`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Service health check with indexer state |
+| GET | `/api/status` | Multi-service status (RPC, Horizon, unlock) |
+| POST | `/api/auth/challenge` | Issue time-bound challenge token for wallet verification |
+| POST | `/api/auth/rotate-secret` | Rotate challenge token secrets with grace period |
+| GET | `/api/prompts` | List published prompts (optional `category` & `walletAddress` filters) |
+| POST | `/api/prompts/unlock` | Verify wallet access and return decrypted prompt |
+| GET | `/api/prompts/version` | Get versioned prompt content for a buyer |
+
+### Express Server (`/api/*` on port 5000)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/prompts` | List published prompts (cached, filtered) |
+| GET | `/api/prompts/buyer/:wallet/owned` | Get prompts owned by wallet |
+| GET | `/api/prompts/buyer/:wallet/saved` | Get prompts saved by wallet |
+| GET | `/api/prompts/creator/:wallet/drafts` | Get creator draft prompts |
+| POST | `/api/prompts/preview` | Record prompt preview |
+| GET | `/api/prompts/preview/stats` | Get preview analytics for creator |
+| POST | `/api/prompts/reports` | Submit prompt report |
+| GET | `/api/prompts/reports` | Get prompt reports (admin) |
+| GET | `/api/search` | Search prompts and users |
+| POST | `/api/webhooks` | Register webhook subscriptions |
+
+## Dark Mode
+
+The application supports light, dark, and system-preference themes:
+
+- **Theme persistence**: Your selection is stored in `localStorage` as `theme-preference`
+- **System-aware**: When set to "System", the UI follows your OS color scheme preference
+- **Toggle**: Use the theme switch icon in the top navigation bar
+- **CSS variables**: Theme colors are defined as CSS custom properties in `src/index.css` with `.dark` class overrides
+- **Tailwind integration**: Dark mode uses Tailwind's `class` strategy — add the `dark:` prefix for theme-specific styles
+
+Toggle between Light, Dark, and System modes from the dropdown in the navigation bar. The setting persists across sessions.
+
+## Linting & Code Quality
+
+The project uses ESLint with TypeScript support for code quality:
+
+```bash
+# Run the linter
+npm run lint
+
+# Auto-fix fixable issues
+npm run lint -- --fix
+```
+
+Key linting rules:
+- Unused variables are flagged as warnings
+- Underscore-prefixed parameters (`_param`) are exempt from unused-variable checks
+- TypeScript strict mode is enabled for type safety
+- Prettier handles code formatting (`npm run format`)
+
+Run both checks before opening a pull request:
+```bash
+npm run lint && npm run typecheck
+```
+
 ## GitHub Preparation
 
 - Recommended repository name: `prompt-hash-stellar`
@@ -410,3 +507,21 @@ Maintained by the PromptHash Stellar team for Drip Wave submission and ongoing o
 - `docs: rewrite repository for Drip Wave submission`
 - `docs: add architecture and ecosystem overview`
 - `chore: align package metadata with PromptHash Stellar`
+
+## Dependency Updates
+
+Dependencies are managed automatically via [Dependabot](https://docs.github.com/en/code-security/dependabot) (see `.github/dependabot.yml`).
+
+Dependabot opens pull requests every Monday for:
+
+- **npm** (`/`) — frontend packages (Vite, React, Tailwind, etc.)
+- **Cargo** (`/contracts/prompt-hash`) — Soroban / Rust crates, grouped into a single PR
+
+### Reviewing and merging updates
+
+1. Check the Dependabot PR description for the changelog and any breaking-change notes.
+2. Run `npm ci && npm run build` locally (or let CI run) to confirm the frontend still compiles.
+3. For Cargo updates, run `cargo test` inside `contracts/prompt-hash/` before merging.
+4. Merge the PR; Dependabot will rebase any remaining open PRs automatically.
+
+If a Dependabot PR introduces a breaking change, close it and pin the old version in `package.json` or `Cargo.toml` until the issue is resolved upstream.
