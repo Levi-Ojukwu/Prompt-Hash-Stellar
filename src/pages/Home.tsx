@@ -163,6 +163,9 @@ export default function Home() {
                   </div>
                 );
               })}
+              <div className="mt-4">
+                <MarketplaceActivityFeed limit={5} />
+              </div>
             </div>
           </div>
         </section>
