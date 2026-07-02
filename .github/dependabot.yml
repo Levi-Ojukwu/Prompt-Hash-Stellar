@@ -1,6 +1,7 @@
 version: 2
 updates:
   # Frontend dependencies (npm/yarn)
+  # Keep npm dependencies up to date for the frontend
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

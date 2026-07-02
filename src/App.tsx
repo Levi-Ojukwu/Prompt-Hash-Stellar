@@ -1,8 +1,10 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "./components/animations/PageTransition";
 import Home from "./pages/Home";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 
 const BrowsePage = lazy(() => import("./pages/browse/page.jsx"));
 const SellPage = lazy(() => import("./pages/sell/page.tsx"));
@@ -27,7 +29,7 @@ const PayoutSettingsPage = lazy(
 );
 
 const AppLayout = () => (
-  <main className="min-h-screen bg-slate-950 text-white">
+  <main className="min-h-screen bg-background text-foreground">
     <Outlet />
   </main>
 );
@@ -58,19 +60,26 @@ function AppRoutes() {
 }
 
 function App() {
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  useKeyboardShortcuts({ onShowShortcuts: () => setShowShortcutsModal(true) });
+
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen bg-slate-950">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-            <p className="text-sm text-slate-400">Loading...</p>
+    <>
+      <KeyboardShortcutsModal
+        open={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen bg-background">
+            <div className="text-foreground text-lg">Loading...</div>
           </div>
-        </div>
-      }
-    >
-      <AppRoutes />
-    </Suspense>
+        }
+      >
+        <AppRoutes />
+      </Suspense>
+    </>
   );
 }
 

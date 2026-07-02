@@ -1,7 +1,6 @@
 import { memo } from "react";
 import { memo } from "react";
 import { Link, NavLink } from "react-router-dom";
-import NetworkSwitcher from "./NetworkSwitcher";
 import {
   Activity,
   LibraryBig,
@@ -69,7 +68,9 @@ export const Navigation = memo(function Navigation() {
         <div className="hidden items-center gap-2 md:flex md:gap-4">
           <ThemeToggle />
           <SellerNotificationCenter />
-          <DisplayWallet />
+          <span data-tour="connect-wallet">
+            <DisplayWallet />
+          </span>
         </div>
 
         <Sheet>
